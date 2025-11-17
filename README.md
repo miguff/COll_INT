@@ -6,9 +6,14 @@ This repository contains the second assignment for the **Collective Intelligence
 ---
 
 ### Version Information
-**Version:** 1.0  
-**Status:** Work in Progress - will be updated as development continues.  
-**Last Updated:** 2025.10.31
+**Version:** 1.1
+**Status:** Work in Progress (One Baseline finished) - will be updated as development continues.  
+**Last Updated:** 2025.11.17
+
+## UPDATE 1:
+- Implemented a Baseline version, where the cars can go however they like, no need to stop and wait for others.
+- Implememted 2 metrics, Successful throuput and collision
+- Next is to implement the FIFO system
 
 ### Goal 1: Setup and Test Rule-Based Systems
 - Implement a **rule-based system** simulating decision-making at intersections.  
