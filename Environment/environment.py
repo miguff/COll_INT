@@ -4,6 +4,8 @@ import random
 import sys
 sys.path.append(r'C:\Users\local_user\Documents\Programozás\SelfDrivingCar\CarlaRun\PythonAPI\carla')
 from Agents import BasicAgent
+from collections import deque
+
 
 class Environment(object):
 
@@ -41,6 +43,8 @@ class Environment(object):
         self.start_positions = start_positions
         self.end_positions = endpositions
         self.number_of_agents = 0
+        self.wait_queue = deque()
+        self.world.tick()
 
 
 
