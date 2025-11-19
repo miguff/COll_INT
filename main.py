@@ -10,7 +10,7 @@ def main(world):
     
     settings = world.get_settings()
     settings.fixed_delta_seconds = DELTA
-    settings.synchronous_mode = False
+    settings.synchronous_mode = True
     world.apply_settings(settings)
 
     SIMULATION_TIME = 120 #20 sec simulation time
@@ -22,7 +22,7 @@ def main(world):
         algorithm = Baseline(world, SIMULATION_TIME, env, DELTA=DELTA)
  
         
-    algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA)
+    algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=2)
     algorithm.simulation()
     success_count, collision_count, waitTime = algorithm.simulation()
 

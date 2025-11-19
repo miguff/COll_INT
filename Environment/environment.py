@@ -31,25 +31,35 @@ class Environment(object):
         #Furth Lane - ID 49 for spawn - Possible end IDs: 2, 26, 104
         self.center4 = center4
 
+        color = carla.Color(255, 0, 0)
+
+        self.center5 = carla.Location(x=-47, y=21, z=0.0)
+        middle_color = carla.Color(255, 255, 0)
+
         self.life_time = life_time
         self.actors_list = {}
+        self.bounding_boxes = []
 
-        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=10)
-        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=10)
-        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=10)
-        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=10)
+        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=10, color=color)
+        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=10, color=color)
+        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=10, color=color)
+        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=10, color=color)
+        self.draw_ground_rectangle(self.center5, width=25, height=25, life_time=10, color=middle_color)
 
         self.spawn_points = self.world.get_map().get_spawn_points()
         self.start_positions = start_positions
         self.end_positions = endpositions
         self.number_of_agents = 0
         self.wait_queue = deque()
+        self.middle_queue = deque()
+        self.moving_id = 0
         self.world.tick()
+        
 
 
 
 
-    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, life_time=0.0):
+    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, life_time=0.0, color: carla.Color = carla.Color(255, 0, 0)):
         """
         Draws a visible rectangle on the ground using debug lines.
         Arguments:
@@ -68,7 +78,8 @@ class Environment(object):
         p3 = carla.Location(center.x + half_w, center.y + half_h, center.z + z_offset)
         p4 = carla.Location(center.x - half_w, center.y + half_h, center.z + z_offset)
 
-        color = carla.Color(255, 0, 0)  # red lines
+        self.bounding_boxes.append([p1, p2, p3, p4])
+
 
         self.world.debug.draw_line(p1, p2, thickness=0.2, color=color, life_time=life_time)
         self.world.debug.draw_line(p2, p3, thickness=0.2, color=color, life_time=life_time)
