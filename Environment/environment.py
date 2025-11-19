@@ -39,11 +39,12 @@ class Environment(object):
         self.life_time = life_time
         self.actors_list = {}
         self.bounding_boxes = []
+        self.line_equations = {}
 
-        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=10, color=color)
-        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=10, color=color)
-        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=10, color=color)
-        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=10, color=color)
+        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=10, color=color, intersection_number=1)
+        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=10, color=color, intersection_number=2)
+        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=10, color=color, intersection_number=3)
+        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=10, color=color, intersection_number=4)
         self.draw_ground_rectangle(self.center5, width=25, height=25, life_time=10, color=middle_color)
 
         self.spawn_points = self.world.get_map().get_spawn_points()
@@ -52,6 +53,7 @@ class Environment(object):
         self.number_of_agents = 0
         self.wait_queue = deque()
         self.middle_queue = deque()
+        self.already_through = deque()
         self.moving_id = 0
         self.world.tick()
         
@@ -59,7 +61,7 @@ class Environment(object):
 
 
 
-    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, life_time=0.0, color: carla.Color = carla.Color(255, 0, 0)):
+    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, life_time=0.0, color: carla.Color = carla.Color(255, 0, 0), intersection_number: int = -1):
         """
         Draws a visible rectangle on the ground using debug lines.
         Arguments:
@@ -79,6 +81,20 @@ class Environment(object):
         p4 = carla.Location(center.x - half_w, center.y + half_h, center.z + z_offset)
 
         self.bounding_boxes.append([p1, p2, p3, p4])
+        
+        if intersection_number == 1:
+            A, B, C = self._line_from_points(p3, p4)
+            self.line_equations[intersection_number] = (A, B, C)
+        elif intersection_number == 2:
+            A, B, C = self._line_from_points(p1, p2)
+            self.line_equations[intersection_number] = (A, B, C)
+        elif intersection_number == 3:
+            A, B, C = self._line_from_points(p2, p3)
+            self.line_equations[intersection_number] = (A, B, C)
+        elif intersection_number == 4:
+            A, B, C = self._line_from_points(p4, p1)
+            self.line_equations[intersection_number] = (A, B, C)
+        
 
 
         self.world.debug.draw_line(p1, p2, thickness=0.2, color=color, life_time=life_time)
@@ -146,6 +162,16 @@ class Environment(object):
 
         return vehicle
     
+
+    def _line_from_points(self, p1, p2):
+        """
+        Calculates the coefficients A, B, and C for the line equation Ax + By = C.
+        """
+        A = (p1.y - p2.y)
+        B = (p2.x - p1.x)
+        C = (p1.x * p2.y - p2.x * p1.y)
+        return A, B, C
+
 
     def _attach_collision_sensor(self, vehicle, actor_id: str):
         bp_lib = self.world.get_blueprint_library()

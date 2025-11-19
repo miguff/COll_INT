@@ -10,7 +10,7 @@ class Algorithm(ABC):
         self.running_simulation_time = 0
         self.simulation_time = simulation_time
         self.env = env
-        self.waitTime = 0
+        self.waitTime: float = 0
         self.spawn_interval = spawn_interval  
         self.max_vehicles   = max_vehicles    
         self.world = world

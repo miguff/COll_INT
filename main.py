@@ -20,10 +20,9 @@ def main(world):
     
     if baseline:
         algorithm = Baseline(world, SIMULATION_TIME, env, DELTA=DELTA)
- 
-        
-    algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=2)
-    algorithm.simulation()
+     
+    algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=20)
+    
     success_count, collision_count, waitTime = algorithm.simulation()
 
     print("-----------------------------------------------------")
@@ -34,6 +33,10 @@ def main(world):
     print(f"Wait time: {waitTime} sec")
     print("-----------------------------------------------------")
 
+    #// Just for after easier navigation in the CARLA
+    settings = world.get_settings()
+    settings.synchronous_mode = False
+    world.apply_settings(settings)
 
 
 if __name__ == "__main__":

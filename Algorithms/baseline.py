@@ -4,17 +4,7 @@ from Environment import Environment
 class Baseline(Algorithm):
     def __init__(self, world, simulation_time: int, env: Environment,
                  spawn_interval: float = 0.5, max_vehicles: int = 20, DELTA: float = 0.05):
-        super().__init__()
-        self.success_count = 0
-        self.collision_count = 0
-        self.running_simulation_time = 0
-        self.simulation_time = simulation_time
-        self.env = env
-        self.waitTime = 0
-        self.spawn_interval = spawn_interval  
-        self.max_vehicles   = max_vehicles    
-        self.world = world
-        self.DELTA = DELTA
+        super().__init__(world, simulation_time, env, spawn_interval, max_vehicles, DELTA)
 
 
     def simulation(self) -> tuple:
