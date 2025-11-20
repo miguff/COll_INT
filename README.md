@@ -6,9 +6,14 @@ This repository contains the second assignment for the **Collective Intelligence
 ---
 
 ### Version Information
-**Version:** 1.1
-**Status:** Work in Progress (One Baseline finished) - will be updated as development continues.  
-**Last Updated:** 2025.11.17
+**Version:** 1.2
+**Status:** Work in Progress (Two Baseline finished) - will be updated as development continues.  
+**Last Updated:** 2025.11.20
+
+
+## UPDATE 2:
+
+- Implemnted FIFO based system.
 
 ## UPDATE 1:
 - Implemented a Baseline version, where the cars can go however they like, no need to stop and wait for others.
