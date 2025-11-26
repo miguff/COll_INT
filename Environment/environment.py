@@ -3,8 +3,9 @@ import carla
 import random
 import sys
 sys.path.append(r'C:\Users\local_user\Documents\Programozás\SelfDrivingCar\CarlaRun\PythonAPI\carla')
-from Agents import BasicAgent
+from Agents import BasicAgent, PPOAgent
 from collections import deque
+from typing import Union
 
 
 class Environment(object):
@@ -41,11 +42,11 @@ class Environment(object):
         self.bounding_boxes = []
         self.line_equations = {}
 
-        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=10, color=color, intersection_number=1)
-        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=10, color=color, intersection_number=2)
-        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=10, color=color, intersection_number=3)
-        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=10, color=color, intersection_number=4)
-        self.draw_ground_rectangle(self.center5, width=25, height=25, life_time=10, color=middle_color)
+        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=30, color=color, intersection_number=1)
+        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=30, color=color, intersection_number=2)
+        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=30, color=color, intersection_number=3)
+        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=30, color=color, intersection_number=4)
+        self.draw_ground_rectangle(self.center5, width=25, height=25, life_time=30, color=middle_color)
 
         self.spawn_points = self.world.get_map().get_spawn_points()
         self.start_positions = start_positions
@@ -117,7 +118,7 @@ class Environment(object):
             )
             drawn_points.append(point)
 
-    def spawns_actor(self):
+    def spawns_actor(self, agenttype: Union[BasicAgent, PPOAgent]):
 
         #Spawn to random start and random ends
         startid = random.choice(self.start_positions)
@@ -128,7 +129,8 @@ class Environment(object):
         vehicle = self.spawn_random_vehicle(spawn)
         if vehicle == None:
             return self.actors_list
-        agent = BasicAgent(vehicle, spawn.location, end_location, target_speed=10)
+        print(agenttype)
+        agent = agenttype(vehicle, spawn.location, end_location, target_speed=10)
         
         self.number_of_agents += 1
         actor_id = f"{self.number_of_agents}"

@@ -24,7 +24,7 @@ class FIFO(Algorithm):
         last_spawn_time = snapshot.timestamp.elapsed_seconds
 
         #// Spawn a starting actor
-        self.env.spawns_actor()
+        self.env.spawns_actor(BasicAgent)
 
         #// Run simulation
         running_sim = True
@@ -47,8 +47,7 @@ class FIFO(Algorithm):
                 #// Check wheter the number of agents in the environment is less than the max number
                 #// if yes, then create a new
                 if len(actor_dict) < self.max_vehicles:
-                    pass
-                    self.env.spawns_actor()
+                    self.env.spawns_actor(BasicAgent)
                 last_spawn_time = current_time
 
             #// Create a list for deletable actors

@@ -1,5 +1,6 @@
 from Algorithms.AlgorithmAbs import Algorithm
 from Environment import Environment
+from Agents.basicagent import BasicAgent
 
 class Baseline(Algorithm):
     def __init__(self, world, simulation_time: int, env: Environment,
@@ -32,7 +33,7 @@ class Baseline(Algorithm):
             if current_time - last_spawn_time >= self.spawn_interval:
                 if len(actor_dict) < self.max_vehicles:
                     pass
-                    self.env.spawns_actor()
+                    self.env.spawns_actor(BasicAgent)
                 last_spawn_time = current_time
 
             # 2) Move existing vehicles and delete ones that reached destination

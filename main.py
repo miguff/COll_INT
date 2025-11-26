@@ -1,9 +1,21 @@
 import carla
 from Environment import Environment
-from Algorithms import Baseline, FIFO
+from Algorithms import Baseline, FIFO, PPO  
 
 DELTA = 0.05
 baseline = False
+fifo = False
+
+#Csak személygépjármű legyen
+
+#Maximum résztvevő szám, adott pillanatban maximum x vehet részt
+#Első pozvióban láthat a saját x,y pozicióját, sebességét, választott action, (méret)
+#maradék helyre az összes többi járműnek ugyanezek a paraméterek
+
+#Minden ágens egymástól független, minden megkap minden információt, minden ágensnek saját tanuló algoritmusa van
+
+#MLP és PPO alap
+
 
 
 def main(world):
@@ -13,15 +25,17 @@ def main(world):
     settings.synchronous_mode = True
     world.apply_settings(settings)
 
-    SIMULATION_TIME = 120 #20 sec simulation time
+    SIMULATION_TIME = 20 #20 sec simulation time
     env = Environment(world, life_time=10)
     env.DrawPointsFor30Sec()
     #Setup the environment
     
     if baseline:
         algorithm = Baseline(world, SIMULATION_TIME, env, DELTA=DELTA)
-     
-    algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=20)
+    if fifo:
+        algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=2)
+    
+    algorithm = PPO(world, SIMULATION_TIME, env,DELTA=DELTA, max_vehicles=2)
     
     success_count, collision_count, waitTime = algorithm.simulation()
 
