@@ -16,8 +16,10 @@ class Environment(object):
                  center3: carla.Location = carla.Location(x=-70.5, y=26, z=0.0),
                  center4: carla.Location = carla.Location(x=-23, y=15, z=0.0),
                  life_time: int = 0,
-                 start_positions: list = [126, 28, 85, 49],
-                 endpositions: dict = {126: [2, 26, 55], 28: [55,2,104], 85: [26, 55, 104], 49: [2, 26, 104]}):
+                 start_positions: list = [126, 29, 80, 49],
+                 endpositions: dict = {126: [2, 26, 55], 29: [55,2,104], 80: [26, 55, 104], 49: [2, 26, 104]},
+                 target_speed = 10):
+        self.target_speed = target_speed
         self.world = world
 
         #First lane - ID 126 for spawn - Possible end IDs: 2, 26, 55
@@ -41,12 +43,12 @@ class Environment(object):
         self.actors_list = {}
         self.bounding_boxes = []
         self.line_equations = {}
-
-        self.draw_ground_rectangle(self.center1, width=7, height=15, life_time=30, color=color, intersection_number=1)
-        self.draw_ground_rectangle(self.center2, width=7, height=15, life_time=30, color=color, intersection_number=2)
-        self.draw_ground_rectangle(self.center3, width=15, height=7, life_time=30, color=color, intersection_number=3)
-        self.draw_ground_rectangle(self.center4, width=15, height=7, life_time=30, color=color, intersection_number=4)
-        self.draw_ground_rectangle(self.center5, width=25, height=25, life_time=30, color=middle_color)
+        
+        self.draw_ground_rectangle(self.center1, width=7, height=15, color=color, intersection_number=1)
+        self.draw_ground_rectangle(self.center2, width=7, height=15, color=color, intersection_number=2)
+        self.draw_ground_rectangle(self.center3, width=15, height=7, color=color, intersection_number=3)
+        self.draw_ground_rectangle(self.center4, width=15, height=7, color=color, intersection_number=4)
+        self.draw_ground_rectangle(self.center5, width=25, height=25, color=middle_color)
 
         self.spawn_points = self.world.get_map().get_spawn_points()
         self.start_positions = start_positions
@@ -56,20 +58,21 @@ class Environment(object):
         self.middle_queue = deque()
         self.already_through = deque()
         self.moving_id = 0
+        print("rajzolom a pontokat")
+        self.DrawPointsFor30Sec()
         self.world.tick()
         
 
 
 
 
-    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, life_time=0.0, color: carla.Color = carla.Color(255, 0, 0), intersection_number: int = -1):
+    def draw_ground_rectangle(self, center, width, height, z_offset=0.2, color: carla.Color = carla.Color(255, 0, 0), intersection_number: int = -1):
         """
         Draws a visible rectangle on the ground using debug lines.
         Arguments:
         - center: carla.Location
         - width, height: rectangle size in meters
         - z_offset: height above ground
-        - life_time: how long the rectangle stays (0 = forever)
         """
 
         # Rectangle corners relative to center
@@ -98,10 +101,10 @@ class Environment(object):
         
 
 
-        self.world.debug.draw_line(p1, p2, thickness=0.2, color=color, life_time=life_time)
-        self.world.debug.draw_line(p2, p3, thickness=0.2, color=color, life_time=life_time)
-        self.world.debug.draw_line(p3, p4, thickness=0.2, color=color, life_time=life_time)
-        self.world.debug.draw_line(p4, p1, thickness=0.2, color=color, life_time=life_time)
+        self.world.debug.draw_line(p1, p2, thickness=0.2, color=color, life_time=self.life_time)
+        self.world.debug.draw_line(p2, p3, thickness=0.2, color=color, life_time=self.life_time)
+        self.world.debug.draw_line(p3, p4, thickness=0.2, color=color, life_time=self.life_time)
+        self.world.debug.draw_line(p4, p1, thickness=0.2, color=color, life_time=self.life_time)
 
     def DrawPointsFor30Sec(self):
         drawn_points = []
@@ -113,7 +116,7 @@ class Environment(object):
                 point_id,
                 draw_shadow=False,
                 color=carla.Color(r=255, g=255, b=255),
-                life_time=60,  # Set to 0 to make it persist indefinitely
+                life_time=self.life_time,  # Set to 0 to make it persist indefinitely
                 persistent_lines=True
             )
             drawn_points.append(point)
@@ -129,8 +132,7 @@ class Environment(object):
         vehicle = self.spawn_random_vehicle(spawn)
         if vehicle == None:
             return self.actors_list
-        print(agenttype)
-        agent = agenttype(vehicle, spawn.location, end_location, target_speed=10)
+        agent = agenttype(vehicle, spawn.location, end_location, target_speed=self.target_speed)
         
         self.number_of_agents += 1
         actor_id = f"{self.number_of_agents}"
@@ -149,10 +151,23 @@ class Environment(object):
         bp_lib = self.world.get_blueprint_library()
         vehicle_blueprints = bp_lib.filter('vehicle.*')
 
+        CARS = [
+            #"vehicle.audi.a2",
+            #"vehicle.chevrolet.impala",
+            "vehicle.citroen.c3",
+            #"vehicle.dodge.charger_2020",
+            #"vehicle.lincoln.mkz_2017",
+            #"vehicle.mercedes.c_class",
+            #"vehicle.seat.leon",
+            #"vehicle.tesla.model3",
+            #"vehicle.toyota.prius"
+        ]
+
+
         # optionally filter out bikes, etc.
-        vehicle_blueprints = [bp for bp in vehicle_blueprints
-                            if bp.has_attribute("number_of_wheels") 
-                            and int(bp.get_attribute("number_of_wheels").as_int()) == 4]
+        vehicle_blueprints = [
+            bp for bp in bp_lib if bp.id in CARS
+        ]
 
         blueprint = random.choice(vehicle_blueprints)
 
@@ -191,7 +206,7 @@ class Environment(object):
 
         # Collision callback: just mark the actor as collided
         def _on_collision(event, env=self, actor_id=actor_id):
-            print(f"[COLLISION] actor {actor_id}")
+            #print(f"[COLLISION] actor {actor_id}")
             if actor_id in env.actors_list:
                 env.actors_list[actor_id]["collided"] = True
 

@@ -202,4 +202,4 @@ class FIFO(Algorithm):
 
         #// Average out the waiting times
         self.waitTime = round(np.mean(list(self.WaitDict.values())))
-        return (self.success_count, self.collision_count, self.waitTime)
+        return (self.success_count, self.collision_count, self.waitTime, -1)

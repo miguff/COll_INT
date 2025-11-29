@@ -1,12 +1,13 @@
 from Algorithms.AlgorithmAbs import Algorithm
 from Environment import Environment
 from Agents.basicagent import BasicAgent
+import math
 
 class Baseline(Algorithm):
     def __init__(self, world, simulation_time: int, env: Environment,
                  spawn_interval: float = 0.5, max_vehicles: int = 20, DELTA: float = 0.05):
         super().__init__(world, simulation_time, env, spawn_interval, max_vehicles, DELTA)
-
+        self.speed_list = []
 
     def simulation(self) -> tuple:
         
@@ -47,6 +48,11 @@ class Baseline(Algorithm):
                 # Let the agent compute the next control
                 control = agent.run_step()
                 vehicle.apply_control(control)
+                vel = vehicle.get_velocity()
+                vehicle_speed = math.sqrt(vel.x ** 2 + vel.y ** 2)
+                self.speed_list.append(vehicle_speed)
+
+
                 # If the agent reached the goal
                 if agent.done() or data["collided"]:
                     if data["collided"]:
@@ -90,4 +96,4 @@ class Baseline(Algorithm):
         self.env.actors_list.clear()
         self.world.tick()
 
-        return (self.success_count, self.collision_count, self.waitTime)
+        return (self.success_count, self.collision_count, self.waitTime, self.speed_list)

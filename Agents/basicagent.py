@@ -8,12 +8,12 @@ from shapely.geometry import Polygon
 import numpy as np
 
 class BasicAgent(object):
-    def __init__(self, vehicle, spawn_point: carla.Location, endlocation: carla.Location, target_speed=30):
+    def __init__(self, vehicle, spawn_point: carla.Location, endlocation: carla.Location, target_speed=30, MAX_STEER_DEGREES = 40):
 
         self._vehicle = vehicle
         self._world = self._vehicle.get_world()
 
-
+        self.MAX_STEER_DEGREES = MAX_STEER_DEGREES
         self._map = self._world.get_map()
         self._offset = 0
 
@@ -28,9 +28,8 @@ class BasicAgent(object):
         self.integral_error = 0.0
         self.last_error = 0.0
         self.max_speed = target_speed
-
         # Route planner
-        self.sampling_resolution = 5
+        self.sampling_resolution = 1
         self.grp = GlobalRoutePlanner(self._world.get_map(), self.sampling_resolution)
         self.spawn_point = spawn_point
         self.endlocation = endlocation
@@ -81,6 +80,13 @@ class BasicAgent(object):
 
     def update_control(self, desired_speed):
         current_speed = self.speed
+
+        print("Current Speed")
+        print(current_speed)
+        print("Desired Speed")
+        print(desired_speed)
+
+
         speed_error = desired_speed - current_speed
         self.integral_error += speed_error * self.dt
         derivative_error = (speed_error - self.last_error) / self.dt
@@ -132,7 +138,6 @@ class BasicAgent(object):
     def _compute_steering(self, target_wp, steer_gain=1.0):
         if target_wp is None:
             return 0.0
-
         veh_transform = self._vehicle.get_transform()
         veh_loc = veh_transform.location
         veh_yaw = veh_transform.rotation.yaw * math.pi / 180.0
@@ -170,6 +175,9 @@ class BasicAgent(object):
 
         return steer
 
+
+    def angle_between(self, v1, v2):
+        return math.degrees(np.arctan2(v1[1], v1[0]) - np.arctan2(v2[1], v2[0]))
 
 
 

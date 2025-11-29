@@ -79,7 +79,25 @@ class ActorNetwork(nn.Module):
         dist = self.get_dist(state)
         action = dist.sample()
         logprob = dist.log_prob(action).sum(-1)
-        return action.squeeze(0).detach().numpy(), logprob.item()
+        #return action.squeeze(0).detach().numpy(), logprob.item()
+        return action, logprob
+    
+    def evaluate_actions(self, states, actions):
+        """
+        Used during PPO update to compute logprobs and entropy for given batch.
+        states: (batch, state_dim)
+        actions: (batch, action_dim)
+        """
+        if not isinstance(states, T.Tensor):
+            states = T.tensor(states, dtype=T.float32, device=device)
+        if not isinstance(actions, T.Tensor):
+            actions = T.tensor(actions, dtype=T.float32, device=device)
+
+        dist = self.get_dist(states)  # Beta over each action dim
+        logprobs = dist.log_prob(actions).sum(-1)  # (batch,)
+        entropy = dist.entropy().sum(-1)           # (batch,)
+        return logprobs, entropy
+
 
 
 class CarEncoder(nn.Module):
@@ -93,9 +111,6 @@ class CarEncoder(nn.Module):
         cars: (batch, num_cars, 6)
         returns: (batch, embed_dim)
         """
-        print("cars")
-        print(cars)
-        print(cars.shape)
         B, N, Feature = cars.shape  # batch, num_cars, features(=6)
         x = cars.view(B * N, Feature)           # (B*N, 6)
         x = F.relu(self.fc1(x))

@@ -7,6 +7,12 @@ device = T.device("cuda" if T.cuda.is_available() else "cpu")
 
 
 
+#Egy nagy Buffer
+#egy nagy tanuló algoritmus, amibe a buffer bele fog menni és tanul és 
+#az ágensek ezt a közönes tanult algoritmust tudják majd használni, gyakorlatilkag 
+#inferenciára.
+
+
 
 
 class PPOAgent(BasicAgent):
@@ -16,57 +22,23 @@ class PPOAgent(BasicAgent):
                 spawn_point,
                 endlocation,
                 target_speed=30,
-                embed_dim=64,
-                car_feature_dim=5,
-                fixed_length_state=False):
+                fixed_length_state=False,
+                speed_learn_booster = 2,
+                lookahead = 4):
         super().__init__(vehicle, spawn_point, endlocation, target_speed)
         self.fixed_length_state = fixed_length_state
 
-        self.encoder = CarEncoder(in_dim=car_feature_dim,
-                                  hidden_dim=64,
-                                  embed_dim=embed_dim).to(device)
-
-        self.actor = ActorNetwork(input_dims=embed_dim).to(device)
-        self.critic = CriticNetwork(input_dims=embed_dim).to(device)
-        
-       
+        self.speed_learn_booster = speed_learn_booster
+        self.lookahead = lookahead
         self.next_waypoint_x = spawn_point.x
         self.next_waypoint_y = spawn_point.y
         #// So that the next waypoint are updated, and then the algorithm can get the current value
-        target_wp = self._get_target_waypoint()
+        target_wp = self._get_target_waypoint(look_ahead=self.lookahead)
         self.next_waypoint_x = target_wp.transform.location.x
         self.next_waypoint_y = target_wp.transform.location.y
         
-
-    
-    def _encode_state(self, state):
-        state = T.tensor(state, dtype=T.float32, device=device)
-        state = state.unsqueeze(0)
-        with T.no_grad():
-            emb = self.encoder(state)
-        return emb
-
-    
-    def choose_action(self, state):
-        emb = self._encode_state(state)
-        with T.no_grad():
-            action, logprob = self.actor.act(emb)
-            value = self.critic(emb).item()
-
-        return action, logprob, value
-
-    def run_step(self, state):
-        hazard_detected = False
-
-        # Retrieve all relevant actors
-        vehicle_list = self._world.get_actors().filter("*vehicle*")
-        vel = self._vehicle.get_velocity()
-        vehicle_speed = (3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2))/3.6
-
-        max_vehicle_distance = self._base_vehicle_threshold + self._speed_ratio * vehicle_speed
-        affected_by_vehicle, _, _ = self._vehicle_obstacle_detected(vehicle_list, max_vehicle_distance)
-        if affected_by_vehicle:
-            hazard_detected = True
+        
+    def run_step(self, action):
 
         control = carla.VehicleControl()
         # If route finished, stop
@@ -77,29 +49,35 @@ class PPOAgent(BasicAgent):
             return control
         
         # 1) Update where we are on the route
-        #self._update_route_progress()
+        self._update_route_progress()
         # 2) Get a look-ahead waypoint
-        target_wp = self._get_target_waypoint()
-        self.next_waypoint_x = target_wp.transform.location.x
-        self.next_waypoint_y = target_wp.transform.location.y
+        target_wp = self._get_target_waypoint(look_ahead=self.lookahead)
+        
+        if target_wp is not None:
+            self.next_waypoint_x = target_wp.transform.location.x
+            self.next_waypoint_y = target_wp.transform.location.y
         # 3) Steering towards it
         steer = self._compute_steering(target_wp)
 
+        #Diszkrét Action térre le lehetne korlátolni és akkor vagy full brake v full throttle
+        #2 folytonos érték a throttle-re vagy brake-re, ezeket átadni a rendszernek és ezekkel menni, nem kell a 0.-ös elválasztás.
+
+
         # 4) Speed control (you can make this smarter if you want)
-        control_value, log_prob, stateactionvalue = self.choose_action(state)
-        if control_value[0] > 0.5:
-            throttle = float(control_value[1])
+        #throttle = float(action[0])
+        #brake = float(action[1])
+
+        if action[0][0] >= action[0][1]:
+            throttle = float(action[0][0])
             brake = 0
         else:
-            brake = float(control_value[1])
             throttle = 0
-
+            brake = float(action[0][1])
 
         # 5) Build control
         control.throttle = throttle
         control.brake = brake
         control.steer = steer
-        if hazard_detected:
-            control = self.add_emergency_stop(control)
-
+        # if hazard_detected:
+        #     control = self.add_emergency_stop(control)
         return control

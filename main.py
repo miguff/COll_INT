@@ -1,6 +1,8 @@
 import carla
 from Environment import Environment
 from Algorithms import Baseline, FIFO, PPO  
+import time
+from statistics import mean
 
 DELTA = 0.05
 baseline = False
@@ -25,32 +27,42 @@ def main(world):
     settings.synchronous_mode = True
     world.apply_settings(settings)
 
-    SIMULATION_TIME = 20 #20 sec simulation time
-    env = Environment(world, life_time=10)
+    SIMULATION_TIME = 100 #20 sec simulation time
+    env = Environment(world, life_time=0)
     env.DrawPointsFor30Sec()
     #Setup the environment
     
     if baseline:
-        algorithm = Baseline(world, SIMULATION_TIME, env, DELTA=DELTA)
+        algorithm = Baseline(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=1)
     if fifo:
         algorithm = FIFO(world, SIMULATION_TIME, env, DELTA=DELTA, max_vehicles=2)
     
-    algorithm = PPO(world, SIMULATION_TIME, env,DELTA=DELTA, max_vehicles=2)
-    
-    success_count, collision_count, waitTime = algorithm.simulation()
 
-    print("-----------------------------------------------------")
-    print(f"Summary of simulation:")
-    print(f"Running time: {SIMULATION_TIME} sec")
-    print(f"Number of Successful journeys: {success_count}")
-    print(f"Number of Collisions: {collision_count}")
-    print(f"Wait time: {waitTime} sec")
-    print("-----------------------------------------------------")
+    start = time.time()
+    algorithm = PPO(world, SIMULATION_TIME, env,DELTA=DELTA, max_vehicles=7, MaxBufferSize=300)
 
-    #// Just for after easier navigation in the CARLA
-    settings = world.get_settings()
-    settings.synchronous_mode = False
-    world.apply_settings(settings)
+    # #// Do some simulations
+    algorithm.train(10)
+
+    # success_count, collision_count, waitTime, speed_list = algorithm.simulation()
+    # end = time.time()
+    # print("Running Time")
+    # print(end - start)
+
+    # print("-----------------------------------------------------")
+    # print(f"Summary of simulation:")
+    # print(f"Running time: {SIMULATION_TIME} sec")
+    # print(f"Number of Successful journeys: {success_count}")
+    # print(f"Number of Collisions: {collision_count}")
+    # print(f"Wait time: {waitTime} sec")
+    # print(f"Average speed: {mean(speed_list)}")
+    # print(f"Max speed in simulation: {max(speed_list)}")
+    # print("-----------------------------------------------------")
+
+    # #// Just for after easier navigation in the CARLA
+    # settings = world.get_settings()
+    # settings.synchronous_mode = False
+    # world.apply_settings(settings)
 
 
 if __name__ == "__main__":
