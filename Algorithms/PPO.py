@@ -48,7 +48,7 @@ class PPOOptimizer():
         self.encoder = CarEncoder(in_dim=car_feature_dim,
                                   hidden_dim=64,
                                   embed_dim=embed_dim).to(device)
-        self.actor = ActorNetwork(input_dims=embed_dim).to(device)
+        self.actor = ActorNetwork(input_dims=embed_dim, n_actions=1).to(device)
         self.critic = CriticNetwork(input_dims=embed_dim).to(device)
         self.value_coef = value_coef
         self.entropy_coef = entropy_coef
@@ -203,7 +203,7 @@ class PPO(Algorithm):
 
     def train(self, Number_of_Simulations):
 
-        writer = SummaryWriter(log_dir="logs/simulations")
+        writer = SummaryWriter(log_dir="logs/simulations/BiggerPuffer")
 
         for i in range(Number_of_Simulations):
             print(f"{i+1} Simulation")
@@ -229,10 +229,8 @@ class PPO(Algorithm):
             step = i
             writer.add_scalar("success_count", success_count, step)
             writer.add_scalar("collision_count", collision_count, step)
-            writer.add_scalar("wait_time", waitTime, step)
             writer.add_scalar("average_speed", avg_speed, step)
             writer.add_scalar("max_speed", max_speed, step)
-            writer.add_scalar("simulation_time", self.simulation_time, step)
             writer.add_scalar("simulation_reward", self.simulation_reward, step)
             # Optional: histogram of speeds in this simulation
             writer.add_histogram("speed_histogram", T.tensor(self.speed_list, dtype=T.float32), step)
@@ -325,7 +323,7 @@ class PPO(Algorithm):
                             #// It is 0.5, because one collision includes 2 cars but just 1 collision.
                             #print(f"Vehicle {actor_id} Collided, destroying car")
                             self.collision_count += 0.5
-                            reward -= 2
+                            reward -= 5
                             self.CentralPPO.buffer["dones"].append(T.tensor(1))
                         else:
                             #// If it reached the goal print out that
@@ -364,11 +362,11 @@ class PPO(Algorithm):
                 self.speed_list.append(vehicle_speed)
                 control = data["last_control"]
                 if vehicle_speed > agent.max_speed:
-                    reward -= 5
-                elif agent.max_speed - 5 <= vehicle_speed <= agent.max_speed:
-                    reward += 2
+                    reward -= 2
+                elif agent.max_speed - 2 <= vehicle_speed <= agent.max_speed:
+                    reward += 3
 
-                if vehicle_speed < agent.max_speed - 5 and control.throttle > control.brake:
+                if vehicle_speed < agent.max_speed - 2 and control.throttle > control.brake:
                     reward += 1.5
                 
                 reward = T.tensor(reward)

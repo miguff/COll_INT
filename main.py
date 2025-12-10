@@ -39,10 +39,10 @@ def main(world):
     
 
     start = time.time()
-    algorithm = PPO(world, SIMULATION_TIME, env,DELTA=DELTA, max_vehicles=7, MaxBufferSize=300)
+    algorithm = PPO(world, SIMULATION_TIME, env,DELTA=DELTA, max_vehicles=15, MaxBufferSize=1500)
 
     # #// Do some simulations
-    algorithm.train(10)
+    algorithm.train(120)
 
     # success_count, collision_count, waitTime, speed_list = algorithm.simulation()
     # end = time.time()

@@ -3,6 +3,7 @@ import torch as T
 import torch.nn.functional as F
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
 from torch.distributions import Beta
+import math
 
 
 class CriticNetwork(nn.Module):
@@ -46,7 +47,7 @@ class ActorNetwork(nn.Module):
         self.actor = nn.Sequential(
             nn.Linear(self.input_dims, self.fc1_dims),
             nn.LeakyReLU(),
-            nn.Linear(self.fc1_dims, self.fc1_dims),
+            nn.Linear(self.fc1_dims, self.fc2_dims),
             nn.LeakyReLU(),
         )
 
@@ -78,7 +79,11 @@ class ActorNetwork(nn.Module):
     def act(self, state):
         dist = self.get_dist(state)
         action = dist.sample()
-        logprob = dist.log_prob(action).sum(-1)
+
+        action = 2 * action - 1
+
+        logprob = dist.log_prob((action + 1) / 2) - math.log(2.0)
+        logprob = logprob.sum(-1)
         #return action.squeeze(0).detach().numpy(), logprob.item()
         return action, logprob
     
@@ -94,7 +99,10 @@ class ActorNetwork(nn.Module):
             actions = T.tensor(actions, dtype=T.float32, device=device)
 
         dist = self.get_dist(states)  # Beta over each action dim
-        logprobs = dist.log_prob(actions).sum(-1)  # (batch,)
+
+        y = (actions + 1) / 2
+
+        logprobs = dist.log_prob(y).sum(-1) - math.log(2.0) * actions.shape[-1]  # (batch,)
         entropy = dist.entropy().sum(-1)           # (batch,)
         return logprobs, entropy
 
