@@ -121,9 +121,9 @@ class Environment(object):
             )
             drawn_points.append(point)
 
-    def spawns_actor(self, agenttype: Union[BasicAgent, PPOAgent]):
+    def spawns_actor(self, agenttype: Union[BasicAgent, PPOAgent], need_safety_brake = 0):
 
-        #Spawn to random start and random ends
+        #// Spawn to random start and random ends
         startid = random.choice(self.start_positions)
         endid = random.choice(self.end_positions[startid])
         spawn = self.spawn_points[startid]
@@ -132,7 +132,7 @@ class Environment(object):
         vehicle = self.spawn_random_vehicle(spawn)
         if vehicle == None:
             return self.actors_list
-        agent = agenttype(vehicle, spawn.location, end_location, target_speed=self.target_speed)
+        agent = agenttype(vehicle, spawn.location, end_location, target_speed=self.target_speed, need_safety_brake = need_safety_brake)
         
         self.number_of_agents += 1
         actor_id = f"{self.number_of_agents}"
@@ -143,6 +143,7 @@ class Environment(object):
                 "vehicle": vehicle,
                 "sensor": sensor,
                 "collided": False,
+                "speeds": []
             }
 
         return self.actors_list
@@ -164,7 +165,7 @@ class Environment(object):
         ]
 
 
-        # optionally filter out bikes, etc.
+        #// optionally filter out bikes, etc.
         vehicle_blueprints = [
             bp for bp in bp_lib if bp.id in CARS
         ]
@@ -194,7 +195,7 @@ class Environment(object):
         bp_lib = self.world.get_blueprint_library()
         sensor_bp = bp_lib.find('sensor.other.collision')
 
-        # Attach to the vehicle (no offset, but you can move it if you want)
+        #// Attach to the vehicle
         sensor_transform = carla.Transform(
             carla.Location(x=0.0, y=0.0, z=2.0)
         )
@@ -204,7 +205,7 @@ class Environment(object):
             attach_to=vehicle
         )
 
-        # Collision callback: just mark the actor as collided
+        #// Collision callback
         def _on_collision(event, env=self, actor_id=actor_id):
             #print(f"[COLLISION] actor {actor_id}")
             if actor_id in env.actors_list:

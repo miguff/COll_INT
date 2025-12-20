@@ -125,7 +125,6 @@ class CarEncoder(nn.Module):
         x = F.relu(self.fc2(x))           # (B*N, embed_dim)
         x = x.view(B, N, -1)              # (B, N, embed_dim)
 
-        # simple permutation-invariant pooling: mean over cars
         state_embedding = x.mean(dim=1)   # (B, embed_dim)
         return state_embedding
 

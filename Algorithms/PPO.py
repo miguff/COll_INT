@@ -11,6 +11,10 @@ import numpy as np
 import torch.nn.functional as F
 from statistics import mean
 from torch.utils.tensorboard import SummaryWriter
+import os
+import datetime
+
+
 
 class PPOOptimizer():
     def __init__(self,
@@ -146,7 +150,8 @@ class PPOOptimizer():
                 b_old_logprobs = old_logprobs_t[batch_idx]
                 b_advantages = advantages_t[batch_idx]
                 b_returns = returns_t[batch_idx]
-
+                # print("batch_states")
+                # print(b_states)
                 new_logprobs, entropy = self.actor.evaluate_actions(b_states, b_actions)
                 values_pred = self.critic(b_states)
                 
@@ -191,7 +196,8 @@ class PPO(Algorithm):
                  gamma: float = 0.99,
                  lmbda: float = 0.9,
                  entropy_eps: float = 1e-4,
-                 MaxBufferSize: int = 100):
+                 MaxBufferSize: int = 100,
+                 logdir: str = "logs/simulations/"):
         super().__init__(world, simulation_time, env, spawn_interval, max_vehicles, DELTA)
         self.WaitDict: dict = {}
 
@@ -199,11 +205,12 @@ class PPO(Algorithm):
         self.MaxBufferSize = MaxBufferSize
         self.speed_list = []
         self.simulation_reward = 0
-    
+        self.log_dir = logdir
 
     def train(self, Number_of_Simulations):
-
-        writer = SummaryWriter(log_dir="logs/simulations/BiggerPuffer")
+        now = datetime.datetime.now()
+        comment = f'PPO_{now.strftime("%Y-%m-%d %H_%M_%S")}_BufferSize_{self.MaxBufferSize}_Vehicles_{self.max_vehicles}'
+        writer = SummaryWriter(log_dir=os.path.join(self.log_dir, comment), comment=comment)
 
         for i in range(Number_of_Simulations):
             print(f"{i+1} Simulation")
@@ -232,7 +239,6 @@ class PPO(Algorithm):
             writer.add_scalar("average_speed", avg_speed, step)
             writer.add_scalar("max_speed", max_speed, step)
             writer.add_scalar("simulation_reward", self.simulation_reward, step)
-            # Optional: histogram of speeds in this simulation
             writer.add_histogram("speed_histogram", T.tensor(self.speed_list, dtype=T.float32), step)
 
         writer.close()
@@ -241,7 +247,7 @@ class PPO(Algorithm):
         self.simulation_reward = 0
         self.running_simulation_time = 0
         actor_dict = self.env.actors_list   
-        # Initialize time for spawning
+        #// Initialize time for spawning
         snapshot = self.world.get_snapshot()
         if snapshot is None:
             print("No snapshot received from world, exiting.")
@@ -274,17 +280,10 @@ class PPO(Algorithm):
                     self.env.spawns_actor(PPOAgent)
                 last_spawn_time = current_time
 
-            #// Create a list for deletable actors
-            #keys_to_delete = []
-            #// Every tick, move the vehicles
-
-
-            #// Kérdések: Valamiért hibát dobott ha eléri a célt
 
             #// Stepping Phase
             for actor_id, data in list(actor_dict.items()):
                 #// Get the values
-                reward = 0
                 agent: PPOAgent = data["agent"]
                 vehicle = data["vehicle"]
                 sensor = data["sensor"]
@@ -296,10 +295,13 @@ class PPO(Algorithm):
                     continue
 
                 #// This is the PPO step
+                data["last_route_index"] = agent._route_index
                 action = self.CentralPPO.choose_action(current_state)
                 control = agent.run_step(action)
                 vehicle.apply_control(control)
+                #// It is needed, becuase it will be stored to calucate reward from it
                 data["last_control"] = control
+                data["new_route_index"] = agent._route_index
 
             #// Giving Reward Phase
             for actor_id, data in list(actor_dict.items()):
@@ -314,16 +316,14 @@ class PPO(Algorithm):
                     continue
                 self.CentralPPO.next_value(next_state)
 
-                #// How should it train when it dissapears????
 
                 #// Check if the agent is done or collided
                 if agent.done() or data["collided"]:
                         if data["collided"]:
                             #// If collided, than print out that fact, and add 0.5 to the collision count
                             #// It is 0.5, because one collision includes 2 cars but just 1 collision.
-                            #print(f"Vehicle {actor_id} Collided, destroying car")
                             self.collision_count += 0.5
-                            reward -= 5
+                            reward -= 1
                             self.CentralPPO.buffer["dones"].append(T.tensor(1))
                         else:
                             #// If it reached the goal print out that
@@ -345,15 +345,8 @@ class PPO(Algorithm):
                         del actor_dict[actor_id]
                         continue
                 else:
-                    reward += -1
-                    self.CentralPPO.buffer["dones"].append(T.tensor(0))
-                
-                # for key in keys_to_delete:
-                #             del actor_dict[key]
-                #             if len(actor_dict) == 0:
-                #                 running_sim = False
-                #                 #self.world.tick()
-                
+                    reward -= 0.02
+                    self.CentralPPO.buffer["dones"].append(T.tensor(0))                
 
                 #// Give reward based on Velocity. If it is between 25 and 30 give it 1, greater than 30 give it -1, else 0
                 #// If speed equal 0, agent the throttle was positive, than +1.5 point
@@ -362,34 +355,30 @@ class PPO(Algorithm):
                 self.speed_list.append(vehicle_speed)
                 control = data["last_control"]
                 if vehicle_speed > agent.max_speed:
-                    reward -= 2
-                elif agent.max_speed - 2 <= vehicle_speed <= agent.max_speed:
-                    reward += 3
+                    reward -= 1
+                # elif agent.max_speed - 2 <= vehicle_speed <= agent.max_speed:
+                #     reward += 0.5
 
-                if vehicle_speed < agent.max_speed - 2 and control.throttle > control.brake:
-                    reward += 1.5
-                
+                #// Maybe we need a reward for distance to other vehicles
+                #// Maybe reward for reaching the next waypoint
+                if data["new_route_index"] > data["last_route_index"]:
+                    print("Bigger, give points")
+                    reward += 0.03
+
+
+                # if (vehicle_speed < agent.max_speed - 2) and (control.throttle > control.brake):
+                #     #// Try to connect it to the speed, of the car. To Encourage going faster
+                #     reward += 0.02 * vehicle_speed
+                self.simulation_reward += reward
                 reward = T.tensor(reward)
                 self.CentralPPO.buffer["rewards"].append(reward)
+                
             
 
             #// Check if we should train or just rollout
             if len(self.CentralPPO.buffer["next_values"]) > self.MaxBufferSize:
-                all_reward = self.CentralPPO.update()
-                self.simulation_reward += all_reward
-                
+                self.CentralPPO.update()
             
-
-
-
-        # for actor_id, data in list(actor_dict.items()):
-        #     agent: PPOAgent = data["agent"]
-        #     print("Agent summary")
-        #     print(actor_id)
-        #     # print(self.CentralPPO.buffer["actions"])
-        #     # print(self.CentralPPO.buffer["next_value"])
-        #     # print(self.CentralPPO.buffer["next_value"])
-        #     print(len(self.CentralPPO.buffer["next_values"]))
         #// When simulation ends, remove every vehicle and sensor
         print("Cleaning up remaining actors...")
         for actor_id, data in list(actor_dict.items()):

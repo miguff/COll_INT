@@ -22,7 +22,7 @@ class Baseline(Algorithm):
 
         running_sim = True
         while running_sim and self.running_simulation_time <= self.simulation_time:
-        # Advance simulation (use wait_for_tick() if you're in async mode)
+        # Advance simulation
             self.world.tick()
             self.running_simulation_time += self.DELTA
             snapshot = self.world.get_snapshot()
@@ -40,7 +40,7 @@ class Baseline(Algorithm):
             # 2) Move existing vehicles and delete ones that reached destination
             keys_to_delete = []
 
-            # list(...) so we don't modify the dict while iterating
+           
             for actor_id, data in list(actor_dict.items()):
                 agent = data["agent"]
                 vehicle = data["vehicle"]

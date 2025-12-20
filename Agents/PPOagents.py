@@ -7,16 +7,7 @@ import torch.nn.functional as F
 
 
 
-#Egy nagy Buffer
-#egy nagy tanuló algoritmus, amibe a buffer bele fog menni és tanul és 
-#az ágensek ezt a közönes tanult algoritmust tudják majd használni, gyakorlatilkag 
-#inferenciára.
-
-
-
-
 class PPOAgent(BasicAgent):
-#class PPOAgent():
     def __init__(self, 
                 vehicle,
                 spawn_point,
@@ -24,8 +15,10 @@ class PPOAgent(BasicAgent):
                 target_speed=30,
                 fixed_length_state=False,
                 speed_learn_booster = 2,
-                lookahead = 4):
-        super().__init__(vehicle, spawn_point, endlocation, target_speed)
+                lookahead = 4,
+                distance_threshold = 3,
+                need_safety_brake = 0):
+        super().__init__(vehicle, spawn_point, endlocation, target_speed, need_safety_brake=need_safety_brake)
         self.fixed_length_state = fixed_length_state
 
         self.speed_learn_booster = speed_learn_booster
@@ -36,12 +29,13 @@ class PPOAgent(BasicAgent):
         target_wp = self._get_target_waypoint(look_ahead=self.lookahead)
         self.next_waypoint_x = target_wp.transform.location.x
         self.next_waypoint_y = target_wp.transform.location.y
+        self.distance_threshold = distance_threshold
         
         
     def run_step(self, action):
 
         control = carla.VehicleControl()
-        # If route finished, stop
+        #// If route finished, stop
         if self.done():
             control.throttle = 0.0
             control.brake = 1.0
@@ -49,7 +43,7 @@ class PPOAgent(BasicAgent):
             return control
         
         # 1) Update where we are on the route
-        self._update_route_progress()
+        self._update_route_progress(self.distance_threshold)
         # 2) Get a look-ahead waypoint
         target_wp = self._get_target_waypoint(look_ahead=self.lookahead)
         
@@ -59,11 +53,6 @@ class PPOAgent(BasicAgent):
         # 3) Steering towards it
         steer = self._compute_steering(target_wp)
 
-        #Diszkrét Action térre le lehetne korlátolni és akkor vagy full brake v full throttle
-        #2 folytonos érték a throttle-re vagy brake-re, ezeket átadni a rendszernek és ezekkel menni, nem kell a 0.-ös elválasztás.
-
-
-
         throttle = F.relu(action)
         brake = F.relu(-action)
 
@@ -71,6 +60,5 @@ class PPOAgent(BasicAgent):
         control.throttle = throttle.item()
         control.brake = brake.item()
         control.steer = steer
-        # if hazard_detected:
-        #     control = self.add_emergency_stop(control)
+
         return control

@@ -7,12 +7,14 @@ import math
 from shapely.geometry import Polygon
 import numpy as np
 
+#// This is mainly from the CARLA library Basic Agent
+
 class BasicAgent(object):
-    def __init__(self, vehicle, spawn_point: carla.Location, endlocation: carla.Location, target_speed=30, MAX_STEER_DEGREES = 40):
+    def __init__(self, vehicle, spawn_point: carla.Location, endlocation: carla.Location, target_speed=30, MAX_STEER_DEGREES = 40, need_safety_brake=0):
 
         self._vehicle = vehicle
         self._world = self._vehicle.get_world()
-
+        self.need_safety_brake = need_safety_brake
         self.MAX_STEER_DEGREES = MAX_STEER_DEGREES
         self._map = self._world.get_map()
         self._offset = 0
@@ -80,11 +82,6 @@ class BasicAgent(object):
 
     def update_control(self, desired_speed):
         current_speed = self.speed
-
-        print("Current Speed")
-        print(current_speed)
-        print("Desired Speed")
-        print(desired_speed)
 
 
         speed_error = desired_speed - current_speed
@@ -189,10 +186,12 @@ class BasicAgent(object):
         vel = self._vehicle.get_velocity()
         vehicle_speed = (3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2))/3.6
 
-        max_vehicle_distance = self._base_vehicle_threshold + self._speed_ratio * vehicle_speed
-        affected_by_vehicle, _, _ = self._vehicle_obstacle_detected(vehicle_list, max_vehicle_distance)
-        if affected_by_vehicle:
-            hazard_detected = True
+
+        if self.need_safety_brake:
+            max_vehicle_distance = self._base_vehicle_threshold + self._speed_ratio * vehicle_speed
+            affected_by_vehicle, _, _ = self._vehicle_obstacle_detected(vehicle_list, max_vehicle_distance)
+            if affected_by_vehicle:
+                hazard_detected = True
 
         control = carla.VehicleControl()
         # If route finished, stop
@@ -303,7 +302,7 @@ class BasicAgent(object):
 
             target_wpt = self._map.get_waypoint(target_transform.location, lane_type=carla.LaneType.Any)
 
-            # General approach for junctions and vehicles invading other lanes due to the offset
+            #// General approach for junctions and vehicles invading other lanes due to the offset
             if (target_wpt.is_junction) and route_polygon:
 
                 target_bb = target_vehicle.bounding_box
@@ -314,7 +313,7 @@ class BasicAgent(object):
                 if route_polygon.intersects(target_polygon):
                     return (True, target_vehicle, self._compute_distance(target_vehicle.get_location(), ego_location))
 
-            # # Simplified approach, using only the plan waypoints (similar to TM)
+            #// Simplified approach, using only the plan waypoints
             else:
 
                 if target_wpt.road_id != ego_wpt.road_id or target_wpt.lane_id != ego_wpt.lane_id  + lane_offset:
